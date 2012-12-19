@@ -2,39 +2,51 @@
 
 import web,os
 import redis,json,time
-import requests
+import requests,string
 
-webdb = redis.Redis('localhost',db=1)
+webdb = redis.Redis('localhost',db=2)
 web.config.debug =True 
 web_ttl = 2 
 
 urls = (
 	'/','index',
+	'/box/(.*)','box',
+	'/marker/(.*)','marker',
 	'/(.+)','base'
+
 )
-r = requests.session()
-server = 'http://a.tile.openstreetmap.org/'
+
+points = {}
 render = web.template.render('templates')
 app = web.application(urls,globals())
+server = "http://otile1.mqcdn.com/tiles/1.0.0/osm/"
+#server = "http://bl3dr.com:8080/"
 
 class index:
 	def GET(self):
 		return render.base()
 
-		
-class ident:
+class box:
 	def GET(self,name):
-		print name
-		return json.dumps(cq.id(name),indent=4)
+		tmp  = web.input().keys()
+		print tmp
+		return ''
 
+class marker:
+	def GET(self,name):
+		tmp  = web.input()
+		points[(tmp['lat'],tmp['lng'])] = ''
+		print points 
+		return ''
+
+tile_prefix = "tile:"
 class base:
 	def GET(self,name):
-		if webdb.exists('complete:'+name):
-			return webdb.get('complete:'+name)
+		if webdb.exists(tile_prefix+name):
+			return webdb.get(tile_prefix+name)
 		else:
-			req = r.get(server+name)	
-			print req.url
-			webdb.set('complete:'+name,req.content)
+			req = requests.get(server+name)	
+			webdb.set(tile_prefix+name,req.content)
 			return str(req.content)
 
 if __name__ == "__main__":
