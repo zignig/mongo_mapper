@@ -112,24 +112,24 @@ function drawFootprint(val) {
   footprintPolygon.addTo(map);
 }
 
-function stateChanged() {
-  // if AJAX returned a list of markers, add them to the map
-  if (ajaxRequest.readyState==4) {
-    //use the info here that was returned
-    if (ajaxRequest.status==200) {
-      plotlist=eval("(" + ajaxRequest.responseText + ")");
-      removeMarkers();
-      for (i=0;i<plotlist.length;i++) {
-        var plotmark = '';
-        var plotll;
-        if (plotmark != '') {
-          map.addLayer(plotmark);
-          plotlayers.push(plotmark);
-        }
-      }
-    }
-  }
-}
+	function stateChanged() {
+		// if AJAX returned a list of markers, add them to the map
+		if (ajaxRequest.readyState==4) {
+			//use the info here that was returned
+			if (ajaxRequest.status==200) {
+				plotlist=eval("(" + ajaxRequest.responseText + ")");
+				removeMarkers();
+				for (i=0;i<plotlist.length;i++) {
+					var plotll = new L.LatLng(plotlist[i].lat,plotlist[i].lon, true);
+					var plotmark = new L.Marker(plotll);
+					plotmark.data=plotlist[i];
+					map.addLayer(plotmark);
+					plotmark.bindPopup("<h3>"+plotlist[i].name+"</h3>"+plotlist[i].details);
+					plotlayers.push(plotmark);
+				}
+			}
+		}
+	}
 
 function removeMarkers() {
 	for (i=0;i<plotlayers.length;i++) {
