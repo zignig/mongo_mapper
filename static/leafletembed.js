@@ -72,7 +72,7 @@ function initmap() {
   map.on('moveend', onMapMove);
   markers.on('clusterclick', function (a) { a.layer.zoomToBounds(); });
   //map.on('dblclick', onMapClick);
-  markers.on('dblclick', mapClick);
+//  markers.on('dblclick', mapClick);
 }
 
 function mapClick(e){
@@ -126,7 +126,7 @@ function stateChanged() {
 					var plotmark = new L.Marker(plotll);
 					plotmark.data=plotlist[i];
 					markers.addLayer(plotmark);
-					//plotmark.bindPopup("<h3>"+plotlist[i].name+"</h3>"+plotlist[i].details);
+					plotmark.bindPopup("<h3>"+plotlist[i].name+"</h3>"+plotlist[i].details);
 					plotlayers.push(plotmark);
 				}
 			}
