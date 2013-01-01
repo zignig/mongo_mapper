@@ -2,7 +2,7 @@
 
 import web,os
 import redis,json,time
-import requests,string
+import requests,string,traceback
 
 webdb = redis.Redis('localhost',db=2)
 web.config.debug =True 
@@ -25,30 +25,63 @@ server = "http://otile1.mqcdn.com/tiles/1.0.0/osm/"
 class hackspaces:
 	namespace = 'hackspace'
 	def __init__(self):
-		url = "http://hackspaces.org/wiki/Special:Ask/-5B-5BCategory:Hackspace-5D-5D/-3FWebsite/-3FLocation/mainlabel%3DHackspace/order%3DASC/sort%3DCountry/limit%3D500/format%3Djson"
+		self.pages = []
 		if webdb.exists(self.namespace):
 			# process 
 			self.data = json.loads(webdb.get(self.namespace))
 			print('loaded '+str(len(self.data)))
 		else:
-			print('fetch hackspaces')
-			i = 2
-			r = requests.get(url+'/offset%3D'+str(i*100))
-			self.data = r.json
-			print(' updating '+self.namespace)
-			self.items = []
-			for i in self.data['items']:
-				print i
-				if 'location' in i.keys():
-					tmp = {'name':i['label']}
-					tmp['lat'] = i['location']['lat']
-					tmp['lon'] = i['location']['lon']
-					if 'website' in i.keys():
-						tmp['details'] = '<a target=new href="'+i['website']+'">'+i['website']+'</a>'
-					self.items.append(tmp)
-			webdb.set(self.namespace,json.dumps(self.items,indent=True))
-			self.data = self.items
+			self.load_data()
+
+	def load_page(self,tmp_dict,page):
+		url = "http://hackspaces.org/wiki/Special:Ask/-5B-5BCategory:Hackspace-5D-5D/-3FWebsite/-3FLocation/mainlabel%3DHackspace/order%3DASC/limit%3D100/format%3Djson"
+		
+		print('fetch hackspace page '+str(page))
+		try:
+			if page > 0:
+				r = requests.get(url+'/offset%3D'+str(page*100))
+			else:
+				r = requests.get(url)
+			data = json.loads(r.text) 
+			self.pages.append(r.text)
+			print 'count '+str(len(data['items']))
+			for i in data['items']:
+				tmp_dict[i['label']] = i
+			return tmp_dict
+		except:
+			print traceback
+			print('fail on page '+str(page))
+			return tmp_dict
+		
+
+	def load_data(self):
+		print(' updating '+self.namespace)
+		tmp_dict = {}
+		self.items = []
+		for i in range(0,15):
+			tmp_dict = self.load_page(tmp_dict,i)
+		for j in tmp_dict.keys():
+			i = tmp_dict[j]
+			if 'location' in i.keys():
+				tmp = {'name':i['label']}
+				tmp['lat'] = i['location']['lat']
+				tmp['lon'] = i['location']['lon']
+				if 'website' in i.keys():
+					tmp['details'] = '<a target=new href="'+i['website']+'">'+i['website']+'</a>'
+				self.items.append(tmp)
+		webdb.set(self.namespace,json.dumps(self.items,indent=True))
+		self.data = self.items
 	
+	
+	def in_box(self,rect):
+		print rect 
+		items = [] 
+		for i in self.data:
+			if (i['lat'] > rect[1]) and (i['lat'] < rect[3]):
+				if (i['lon'] > rect[0]) and (i['lon'] < rect[2]):
+					items.append(i)
+		return items
+
 	def __repr__(self):
 		return self.req 
 
@@ -64,15 +97,7 @@ class box:
 		for i in box:
 			x = float(i)
 			rect.append(x)	
-		print rect 
-		items = [] 
-		for i in hs.data:
-			if (i['lat'] > rect[1]) and (i['lat'] < rect[3]):
-				if (i['lon'] > rect[0]) and (i['lon'] < rect[2]):
-					print i
-					items.append(i)
-					
-		
+		items = hs.in_box(rect)
 		web.header('Content-type', 'application/json') 
 		return json.dumps(items)
 
@@ -96,4 +121,5 @@ class base:
 global hs
 hs = hackspaces()
 if __name__ == "__main__":
+	#hs.load_data()
 	app.run()

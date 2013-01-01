@@ -32,6 +32,10 @@ function permalink() {
 // Layers
 var osmTiles;
 var mapQuestTiles;
+var markers;
+var max_zoom;
+
+max_zoom = 18;
 
 
 function initmap() {
@@ -44,7 +48,7 @@ function initmap() {
   }
 
   // set up the map
-  map = new L.Map('map');
+  map = new L.Map('map',noWrap=true);
 
   // create the tile layers with correct attribution
   var permalink=' — <a href=#" onClick="permalink();return false;">Permalink</a>';
@@ -52,17 +56,28 @@ function initmap() {
 
   var osmUrl='/{z}/{x}/{y}.png';
   var osmAttrib=dataAttrib + permalink;
-  osmTiles = new L.TileLayer(osmUrl, {minZoom: 2, maxZoom: 18, attribution: osmAttrib});		
+  markers = new L.MarkerClusterGroup({spiderfyOnMaxZoom: true, showCoverageOnHover: true, zoomToBoundsOnClick: false});
+  osmTiles = new L.TileLayer(osmUrl, {minZoom: 0, maxZoom: max_zoom, attribution: osmAttrib});		
+
+
   var baseLayers = {
     "MapQuest": mapQuestTiles
   };
 
-  map.setView(new L.LatLng(0,0),2);
+  map.setView(new L.LatLng(0,0),3);
   map.addLayer(osmTiles);
+  map.addLayer(markers);
   //L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map);
   askForPlots();
   map.on('moveend', onMapMove);
-  map.on('dblclick', onMapClick);
+  markers.on('clusterclick', function (a) { a.layer.zoomToBounds(); });
+  //map.on('dblclick', onMapClick);
+  markers.on('dblclick', mapClick);
+}
+
+function mapClick(e){
+	var pos = e.latlng;
+	map.setView(pos,max_zoom);
 }
 
 function onMapClick(e){
@@ -99,20 +114,7 @@ function isNumeric(s) {
   return ((intRegex.test(s) || floatRegex.test(s)));
 }
 
-function drawFootprint(val) {
-  val = JSON.parse(val);
-  var pts= [];
-  for (x in eval(val)) {
-    pts.push(new L.LatLng(val[x]['lat'], val[x]['lon'], false));
-  }
-  if (footprintPolygon != null) {
-    map.removeLayer(footprintPolygon);
-  }
-  footprintPolygon = L.polygon(pts, { color:'blue', weight : 1, fillOpacity:0.1 });
-  footprintPolygon.addTo(map);
-}
-
-	function stateChanged() {
+function stateChanged() {
 		// if AJAX returned a list of markers, add them to the map
 		if (ajaxRequest.readyState==4) {
 			//use the info here that was returned
@@ -123,8 +125,8 @@ function drawFootprint(val) {
 					var plotll = new L.LatLng(plotlist[i].lat,plotlist[i].lon, true);
 					var plotmark = new L.Marker(plotll);
 					plotmark.data=plotlist[i];
-					map.addLayer(plotmark);
-					plotmark.bindPopup("<h3>"+plotlist[i].name+"</h3>"+plotlist[i].details);
+					markers.addLayer(plotmark);
+					//plotmark.bindPopup("<h3>"+plotlist[i].name+"</h3>"+plotlist[i].details);
 					plotlayers.push(plotmark);
 				}
 			}
@@ -133,9 +135,10 @@ function drawFootprint(val) {
 
 function removeMarkers() {
 	for (i=0;i<plotlayers.length;i++) {
-		map.removeLayer(plotlayers[i]);
+		markers.removeLayer(plotlayers[i]);
 	}
 	plotlayers=[];
 }
+
 initmap()
 
