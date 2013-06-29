@@ -1,6 +1,6 @@
 [submodule "Leaflet"]
 	path = Leaflet
-	url = git://github.com/CloudMade/Leaflet.git
+	url = git://github.com/Leaflet/Leaflet.git
 [submodule "Leaflet.markercluster"]
 	path = Leaflet.markercluster
-	url = git://github.com/danzel/Leaflet.markercluster.git
+	url = git://github.com/Leaflet/Leaflet.markercluster.git

@@ -1,10 +1,15 @@
 #!/usr/bin/python 
 
 import web,os
-import redis,json,time
+import json,time
 import requests,string,traceback
+from pymongo import MongoClient
+from bson import Binary
 
-webdb = redis.Redis('localhost',db=3)
+client = MongoClient()
+db = client.osm_store
+tiles = db.tiles
+
 web.config.debug =True 
 web_ttl = 2 
 
@@ -43,13 +48,13 @@ class hackspaces:
 			else:
 				r = requests.get(url)
 			data = json.loads(r.text) 
-			print data
 			self.pages.append(r.text)
 			print 'count '+str(len(data['items']))
 			for i in data['items']:
 				tmp_dict[i['label']] = i
 			return tmp_dict
 		except:
+			print traceback
 			print('fail on page '+str(page))
 			return tmp_dict
 		
@@ -111,15 +116,26 @@ class marker:
 tile_prefix = "tile:"
 class base:
 	def GET(self,name):
-		if webdb.exists(tile_prefix+name):
-			return webdb.get(tile_prefix+name)
+		data = tiles.find_one({'name':name})
+		if data != None:
+			return data['image']
 		else:
+			tmp = string.split(name,'/')
+			doc = {
+				'name':name,
+				'zoom':tmp[0],
+				'x':tmp[1],
+				'y':tmp[2][:-3]
+				}
 			req = requests.get(server+name)	
-			webdb.set(tile_prefix+name,req.content)
+			image_data = req.content
+			doc['image'] = Binary(image_data)
+			tiles.insert(doc)
 			return str(req.content)
 
 global hs
-hs = hackspaces()
+#hs = hackspaces()
+hs = []
 if __name__ == "__main__":
 	#hs.load_data()
 	app.run()
