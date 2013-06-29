@@ -4,7 +4,7 @@ import web,os
 import redis,json,time
 import requests,string,traceback
 
-webdb = redis.Redis('localhost',db=2)
+webdb = redis.Redis('localhost',db=3)
 web.config.debug =True 
 web_ttl = 2 
 
@@ -43,13 +43,13 @@ class hackspaces:
 			else:
 				r = requests.get(url)
 			data = json.loads(r.text) 
+			print data
 			self.pages.append(r.text)
 			print 'count '+str(len(data['items']))
 			for i in data['items']:
 				tmp_dict[i['label']] = i
 			return tmp_dict
 		except:
-			print traceback
 			print('fail on page '+str(page))
 			return tmp_dict
 		
