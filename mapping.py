@@ -81,7 +81,7 @@ class hackspaces:
 		items = [] 
 		in_rect = markers.find({"loc": {"$within": {"$box": [[rect[0],rect[1]], [rect[2],rect[3]]]}}})
 		for i in in_rect:
-			doc = {'lat':i['loc'][0],'lon':i['loc'][1],'name':i['name']}
+			doc = {'lat':i['loc'][0],'lon':i['loc'][1],'name':i['name'],'id':str(i['_id'])}
 			items.append(doc)
 		return (items)
 
@@ -126,6 +126,7 @@ class base:
 		if data != None:
 			return data['image']
 		else:
+			print 'fetch '+name
 			tmp = string.split(name,'/')
 			doc = {
 				'name':name,

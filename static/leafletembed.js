@@ -95,11 +95,11 @@ function makeMarker(e){
         layer = e.layer;
     if (type === 'marker') {
         // Do marker specific actions
-		//saveMarker(layer);
-        map.addLayer(layer);
+		saveMarker(layer);
     }
-
+	console.log(layer);
     // Do whatever else you need to. (save to db, add to map etc)
+    map.addLayer(layer);
 }
 
 function mapClick(e){
@@ -150,14 +150,13 @@ function stateChanged() {
 			//use the info here that was returned
 			if (ajaxRequest.status==200) {
 				plotlist=eval(ajaxRequest.responseText);
-				console.log(plotlist);
-				//removeMarkers();
+				removeMarkers();
 				for (i=0;i<plotlist.length;i++) {
 					var plotll = new L.LatLng(plotlist[i].lat,plotlist[i].lon, true);
 					var plotmark = new L.Marker(plotll);
 					plotmark.data=plotlist[i];
-					map.addLayer(plotmark);
-					plotmark.bindPopup("<h3>"+plotlist[i].name+"</h3>"+plotlist[i].details);
+					markers.addLayer(plotmark);
+					plotmark.bindPopup("<h3>"+plotlist[i].name+"</h3>"+plotlist[i].id);
 					plotlayers.push(plotmark);
 				}
 			}
