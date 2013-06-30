@@ -8,6 +8,6 @@ from pymongo import MongoClient
 client = MongoClient()
 db = client.osm_store
 tiles  = db.tiles
-
-coll = db.collection_names()
-print coll
+markers = db.markers
+for i in markers.find():
+	print i

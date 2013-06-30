@@ -4,3 +4,6 @@
 [submodule "Leaflet.markercluster"]
 	path = Leaflet.markercluster
 	url = git://github.com/Leaflet/Leaflet.markercluster.git
+[submodule "Leaflet.draw"]
+	path = Leaflet.draw
+	url = git://github.com/Leaflet/Leaflet.draw

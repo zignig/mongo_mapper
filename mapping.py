@@ -5,18 +5,21 @@ import json,time
 import requests,string,traceback
 from pymongo import MongoClient
 from bson import Binary
+from pymongo import GEO2D
 
 client = MongoClient()
 db = client.osm_store
 tiles = db.tiles
+markers = db.markers
+markers.ensure_index([("loc", GEO2D)])
 
 web.config.debug =True 
-web_ttl = 2 
 
 urls = (
 	'/','index',
 	'/box/(.*)','box',
 	'/marker/(.*)','marker',
+	'/favicon.ico','favicon',
 	'/(.+)','base'
 
 )
@@ -31,12 +34,7 @@ class hackspaces:
 	namespace = 'hackspace'
 	def __init__(self):
 		self.pages = []
-		if webdb.exists(self.namespace):
-			# process 
-			self.data = json.loads(webdb.get(self.namespace))
-			print('loaded '+str(len(self.data)))
-		else:
-			self.load_data()
+		#self.load_data()
 
 	def load_page(self,tmp_dict,page):
 		url = "http://hackspaces.org/wiki/Special:Ask/-5B-5BCategory:Hackspace-5D-5D/-3FWebsite/-3FLocation/mainlabel%3DHackspace/order%3DASC/limit%3D100/format%3Djson"
@@ -74,18 +72,18 @@ class hackspaces:
 				if 'website' in i.keys():
 					tmp['details'] = '<a target=new href="'+i['website']+'">'+i['website']+'</a>'
 				self.items.append(tmp)
-		webdb.set(self.namespace,json.dumps(self.items,indent=True))
+		#webdb.set(self.namespace,json.dumps(self.items,indent=True))
 		self.data = self.items
 	
 	
 	def in_box(self,rect):
 		print rect 
 		items = [] 
-		for i in self.data:
-			if (i['lat'] > rect[1]) and (i['lat'] < rect[3]):
-				if (i['lon'] > rect[0]) and (i['lon'] < rect[2]):
-					items.append(i)
-		return items
+		in_rect = markers.find({"loc": {"$within": {"$box": [[rect[0],rect[1]], [rect[2],rect[3]]]}}})
+		for i in in_rect:
+			doc = {'lat':i['loc'][0],'lon':i['loc'][1],'name':i['name']}
+			items.append(doc)
+		return (items)
 
 	def __repr__(self):
 		return self.req 
@@ -109,11 +107,19 @@ class box:
 class marker:
 	def GET(self,name):
 		tmp  = web.input()
-		points[(tmp['lat'],tmp['lng'])] = ''
-		print points 
+		doc = {}
+		print tmp
+		doc['loc'] = [float(tmp['lat']),float(tmp['lng'])] 
+		doc['name'] = 'no name'
+		return_doc = doc.copy()
+		markers.insert(doc)
+		web.header('Content-type', 'application/json') 
+		return json.dumps(([return_doc]))
+
+class favicon:
+	def GET(self):
 		return ''
 
-tile_prefix = "tile:"
 class base:
 	def GET(self,name):
 		data = tiles.find_one({'name':name})
@@ -134,8 +140,7 @@ class base:
 			return str(req.content)
 
 global hs
-#hs = hackspaces()
-hs = []
+hs = hackspaces()
 if __name__ == "__main__":
 	#hs.load_data()
 	app.run()

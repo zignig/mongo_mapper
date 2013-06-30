@@ -56,7 +56,6 @@ function initmap() {
 
   var osmUrl='/{z}/{x}/{y}.png';
   var osmAttrib=dataAttrib + permalink;
-  markers = new L.MarkerClusterGroup({spiderfyOnMaxZoom: true, showCoverageOnHover: true, zoomToBoundsOnClick: false});
   osmTiles = new L.TileLayer(osmUrl, {minZoom: 0, maxZoom: max_zoom, attribution: osmAttrib});		
 
 
@@ -66,13 +65,41 @@ function initmap() {
 
   map.setView(new L.LatLng(0,0),3);
   map.addLayer(osmTiles);
-  map.addLayer(markers);
   //L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map);
   askForPlots();
-  map.on('moveend', onMapMove);
+
+  markers = new L.MarkerClusterGroup();
+  map.addLayer(markers);
   markers.on('clusterclick', function (a) { a.layer.zoomToBounds(); });
-  //map.on('dblclick', onMapClick);
-//  markers.on('dblclick', mapClick);
+  //markers.on('dblclick', mapClick);
+
+  // Initialize the FeatureGroup to store editable layers
+  var drawnItems = new L.FeatureGroup();
+  map.addLayer(drawnItems);
+
+  // Initialize the draw control and pass it the FeatureGroup of editable layers
+  var drawControl = new L.Control.Draw({
+    edit: {
+        featureGroup: drawnItems
+     }
+  });
+  map.addControl(drawControl);
+
+  map.on('viewreset', onMapMove);
+  map.on('dragend', onMapMove);
+  map.on('draw:created', makeMarker);
+}
+
+function makeMarker(e){
+    type = e.layerType;
+        layer = e.layer;
+    if (type === 'marker') {
+        // Do marker specific actions
+		//saveMarker(layer);
+        map.addLayer(layer);
+    }
+
+    // Do whatever else you need to. (save to db, add to map etc)
 }
 
 function mapClick(e){
@@ -80,10 +107,10 @@ function mapClick(e){
 	map.setView(pos,max_zoom);
 }
 
-function onMapClick(e){
-  var marker = L.marker(e.latlng).addTo(map);
-  var msg='/marker/?lat='+e.latlng.lat+'&lng='+e.latlng.lng;
-  ajaxRequest.onreadystatechange = stateChanged;
+function saveMarker(e){
+  console.log(e);
+  var msg='/marker/?lat='+e._latlng.lat+'&lng='+e._latlng.lng;
+  ajaxRequest.onreadystatechange = nothing;
   ajaxRequest.open('GET', msg, true);
   ajaxRequest.send(null);
 }
@@ -102,7 +129,7 @@ function askForPlots() {
   var minll=bounds.getSouthWest();
   var maxll=bounds.getNorthEast();
   var size=map.getSize();
-  var msg='/box/?rect='+minll.lng+','+minll.lat+','+maxll.lng+','+maxll.lat+'&zoom='+map.getZoom()+'&width='+size.x+'&height='+size.y;
+  var msg='/box/?rect='+minll.lat+','+minll.lng+','+maxll.lat+','+maxll.lng+'&zoom='+map.getZoom()+'&width='+size.x+'&height='+size.y;
   ajaxRequest.onreadystatechange = stateChanged;
   ajaxRequest.open('GET', msg, true);
   ajaxRequest.send(null);
@@ -114,18 +141,22 @@ function isNumeric(s) {
   return ((intRegex.test(s) || floatRegex.test(s)));
 }
 
+function nothing(){
+}
+
 function stateChanged() {
 		// if AJAX returned a list of markers, add them to the map
 		if (ajaxRequest.readyState==4) {
 			//use the info here that was returned
 			if (ajaxRequest.status==200) {
-				plotlist=eval("(" + ajaxRequest.responseText + ")");
-				removeMarkers();
+				plotlist=eval(ajaxRequest.responseText);
+				console.log(plotlist);
+				//removeMarkers();
 				for (i=0;i<plotlist.length;i++) {
 					var plotll = new L.LatLng(plotlist[i].lat,plotlist[i].lon, true);
 					var plotmark = new L.Marker(plotll);
 					plotmark.data=plotlist[i];
-					markers.addLayer(plotmark);
+					map.addLayer(plotmark);
 					plotmark.bindPopup("<h3>"+plotlist[i].name+"</h3>"+plotlist[i].details);
 					plotlayers.push(plotmark);
 				}
